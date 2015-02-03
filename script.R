@@ -1,7 +1,7 @@
 ######################################################
 ############ MONTHLY MARKETING REPORT ################
 ######################################################
-
+ptm <- proc.time()
 ######################################################
 ################### SUMMARY ##########################
 ######################################################
@@ -27,17 +27,22 @@ year.rep<- year(today)- (month(today)==1)
 
 # Ask for dates
 
-#dmy(paste("01",month.rep,year.rep, sep="/"))
-startdate<- format(ymd(paste(year.rep,month.rep,"01" ,sep="/")), format = "%Y-%m-%d")
+
+startdate='2014-12-01' ##Start Date#########
+enddate='2014-12-31' ####End Date###########
+
+# startdate<- format(ymd(paste(year.rep,month.rep,"01" ,sep="/")), format = "%Y-%m-%d")
 
 # Check how to set the final day of selected month
-enddate<- format(ymd(paste(year.rep,month.rep,"31" ,sep="/")), format = "%Y-%m-%d")
+# enddate<- format(ymd(paste(year.rep,month.rep,"31" ,sep="/")), format = "%Y-%m-%d")
 
 website<-get_ga(25764841, start.date = startdate, end.date = enddate,
              
              metrics = "
                         ga:sessions,
-                        ga:Users
+                        ga:Users,
+                        ga:pageViews,
+                        ga:avgSessionDuration
                 ",
              
              dimensions = NULL,
@@ -55,7 +60,9 @@ android<-get_ga(81060646, start.date = startdate, end.date = enddate,
                 
                 metrics = "
                         ga:sessions,
-                        ga:Users
+                        ga:Users,
+                        ga:screenviews,
+                        ga:avgSessionDuration
                 ",
                 
                 dimensions = NULL,
@@ -74,7 +81,9 @@ ios<-get_ga(81074931, start.date = startdate, end.date = enddate,
                 
                 metrics = "
                         ga:sessions,
-                        ga:Users
+                        ga:Users,
+                        ga:screenviews,
+                        ga:avgSessionDuration
                 ",
                 
                 dimensions = NULL,
@@ -88,89 +97,223 @@ ios<-get_ga(81074931, start.date = startdate, end.date = enddate,
                 verbose = getOption("rga.verbose")
 )
 
-# load up from Admin Orders per source per month
 
-orders<-read.xlsx("orders_per_source_at_month.xlsx", sheetIndex=1,
-                  startRow = 1, header=TRUE,stringsAsFactors=FALSE)
-verified<-read.xlsx("verified_users_per_source_at_month.xlsx", sheetIndex=1,
-                    startRow = 1, header=TRUE,stringsAsFactors=FALSE)
-registered<-read.xlsx("registered_users_per_source_at_month.xlsx", sheetIndex=1,
-                      startRow = 1, header=TRUE,stringsAsFactors=FALSE)
+#########################################
+################ mySQL ##################
+#########################################
 
-# Pick the numbers we need
-ios$registration <- sum(registered$REGISTERED_USERS[registered$SOURCE == "IOS"], na.rm = TRUE)
-ios$verification <- sum(verified$VERIFIED_USERS[verified$SOURCE == "IOS"], na.rm = TRUE)
-ios$order <- sum(orders$VERIFIED_ORDERS[orders$SOURCE == "IOS"], na.rm = TRUE)
-android$registration <- sum(registered$REGISTERED_USERS[registered$SOURCE == "Android"], na.rm = TRUE)
-android$verification <- sum(verified$VERIFIED_USERS[verified$SOURCE == "Android"], na.rm = TRUE)
-android$order <- sum(orders$VERIFIED_ORDERS[orders$SOURCE == "Android"], na.rm = TRUE)
-website$registration <- sum(registered$REGISTERED_USERS)-android$registration[1]-ios$registration[1]
-website$verification <- sum(verified$VERIFIED_USERS)-android$verification[1]-ios$verification[1]
-website$order <- sum(orders$VERIFIED_ORDERS)-android$order[1]-ios$order[1]
+#########################################
+# Verified Users From mySQL
+#########################################
 
-# Start categorizing 
+# Load package
+library(RMySQL)
+# Set timer
+proc.time() - ptm
+# Establish connection
+con <- dbConnect(RMySQL::MySQL(), host = 'db.clickdelivery.gr', port = 3307, dbname = "beta",
+                 user = "tantonakis", password = "2secret4usAll!")
+# Send query
+rs <- dbSendQuery(con,"
+                  
+                  SELECT COUNT(*) AS VERIFIED_USERS,
+                  `user_master`.`referal_source` AS SOURCE,
+                  `city_detail`.`city_name` AS CITY, 
+                  `prefecture_detail`.`prefecture_name` AS PREFECTURE
+                  
+                  FROM `user_master`
+                  LEFT JOIN `user_address`
+                  ON (`user_address`.`is_default` = 'Y' AND `user_address`.`user_id` = `user_master`.`user_id`)
+                  LEFT JOIN `city_master`
+                  ON (`user_address`.`city_id` = `city_master`.`city_id`)
+                  LEFT JOIN `city_detail`
+                  ON (`city_detail`.`language_id` = '2' AND `city_master`.`city_id` = `city_detail`.`city_id`)
+                  LEFT JOIN `prefecture_detail`
+                  ON (`prefecture_detail`.`language_id` = '2' AND `city_master`.`prefecture_id` = `prefecture_detail`.`prefecture_id`)
+                  
+                  WHERE `user_master`.`verification_date` >= UNIX_TIMESTAMP('2014-12-01')
+                  AND `user_master`.`verification_date` < UNIX_TIMESTAMP('2015-01-01')
+                  AND `user_master`.`status` = 'VERIFIED'
+                  AND `user_master`.`is_deleted` = 'N'
+                  GROUP BY `user_master`.`referal_source`, `city_master`.`city_id`
+                  
+                  ")
+# Fetch query results (n=-1) means all results
+verified_src <- dbFetch(rs, n=-1) 
 
-orders$src[orders$SOURCE == "IOS"]<-"ios"
-orders$src[orders$SOURCE == "Android"]<-"Android"
-verified$src[verified$SOURCE == "IOS"]<-"ios"
-verified$src[verified$SOURCE == "Android"]<-"Android"
-registered$src[registered$SOURCE == "IOS"]<-"ios"
-registered$src[registered$SOURCE == "Android"]<-"Android"
+# close connection
+dbDisconnect(con)
+# Stop timer
+proc.time() - ptm
 
+
+#########################################
+# Registered Users From mySQL
+#########################################
+
+# Establish connection
+con <- dbConnect(RMySQL::MySQL(), host = 'db.clickdelivery.gr', port = 3307, dbname = "beta",
+                 user = "tantonakis", password = "2secret4usAll!")
+# Send query
+rs <- dbSendQuery(con,"
+                  
+                  SELECT COUNT(*) AS REGISTERED_USERS, `user_master`.`status`, `user_master`.`referal_source` AS SOURCE
+                  FROM `user_master`
+                  WHERE `user_master`.`i_date` >= UNIX_TIMESTAMP('2014-12-01')
+                  AND `user_master`.`i_date` < UNIX_TIMESTAMP('2015-01-01')
+                  AND `user_master`.`is_deleted` = 'N'
+                  GROUP BY `user_master`.`status`, `user_master`.`referal_source`
+                  
+                  ")
+# Fetch query results (n=-1) means all results
+registered_src <- dbFetch(rs, n=-1) 
+
+# close connection
+dbDisconnect(con)
+# Stop timer
+proc.time() - ptm
+
+
+#########################################
+# Orders From mySQL
+#########################################
+
+# Establish connection
+con <- dbConnect(RMySQL::MySQL(), host = 'db.clickdelivery.gr', port = 3307, dbname = "beta",
+                 user = "tantonakis", password = "2secret4usAll!")
+# Send query
+rs <- dbSendQuery(con,"
+                  
+                  SELECT COUNT(*) AS VERIFIED_ORDERS, 
+                  `order_master`.`order_referal` AS SOURCE, 
+                  `city_detail`.`city_name` AS CITY, 
+                  `prefecture_detail`.`prefecture_name` AS PREFECTURE, 
+                  SUM(`order_master`.`order_amt`) AS ORDER_VALUE, 
+                  SUM(`order_master`.`order_commission`) AS COMMISSION
+                  FROM `order_master`
+                  JOIN `user_address`
+                  ON (`order_master`.`deliveryaddress_id` = `user_address`.`address_id`)
+                  JOIN `city_master`
+                  ON (`user_address`.`city_id` = `city_master`.`city_id`)
+                  JOIN `city_detail`
+                  ON (`city_detail`.`language_id` = '2' AND `user_address`.`city_id` = `city_detail`.`city_id`)
+                  JOIN `prefecture_detail`
+                  ON (`prefecture_detail`.`language_id` = '2' AND `city_master`.`prefecture_id` = `prefecture_detail`.`prefecture_id`)
+                  WHERE `order_master`.`i_date` >= UNIX_TIMESTAMP('2014-12-01')
+                  AND `order_master`.`i_date` < UNIX_TIMESTAMP('2015-01-01')
+                  AND `order_master`.`status` IN ('VERIFIED', 'REJECTED')
+                  AND `order_master`.`is_deleted` = 'N'
+                  GROUP BY `order_master`.`status`, `order_master`.`order_referal`, `city_detail`.`city_id`
+                  
+                  ")
+# Fetch query results (n=-1) means all results
+orders_src <- dbFetch(rs, n=-1) 
+# close connection
+dbDisconnect(con)
+# Stop timer
+proc.time() - ptm
+
+# Refine and Categorize
+registered_src$status<-NULL
+verified_src$CITY<-NULL
+verified_src$PREFECTURE<-NULL
+orders_src$COMMISSION<-NULL
+orders_src$ORDER_VALUE<-NULL
+orders_src$PREFECTURE<-NULL
+orders_src$CITY<-NULL
+
+registered_src$cat<-""
+verified_src$cat<-""
+orders_src$cat<-""
+
+# Android
+registered_src$cat[registered_src$SOURCE == "Android"]<-"android"
+verified_src$cat[verified_src$SOURCE == "Android"]<-"android"
+orders_src$cat[orders_src$SOURCE == "Android"]<-"android"
+# iOS
+registered_src$cat[registered_src$SOURCE == "IOS"]<-"ios"
+verified_src$cat[verified_src$SOURCE == "IOS"]<-"ios"
+orders_src$cat[orders_src$SOURCE == "IOS"]<-"ios"
 # Organic
-
 ## Google
-registered$src[grep("google", registered$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Organic"
-orders$src[grep("google", orders$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Organic"
-verified$src[grep("google", verified$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Organic"
-
+registered_src$cat[grep("google", registered_src$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"organic"
+verified_src$cat[grep("google", verified_src$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"organic"
+orders_src$cat[grep("google", orders_src$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"organic"
 ## Yahoo
-registered$src[grep("yahoo", registered$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Organic"
-orders$src[grep("yahoo", orders$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Organic"
-verified$src[grep("yahoo", verified$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Organic"
-
-## Search
-registered$src[grep("search", registered$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Organic"
-orders$src[grep("search", orders$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Organic"
-verified$src[grep("search", verified$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Organic"
-
+registered_src$cat[grep("yahoo", registered_src$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"organic"
+verified_src$cat[grep("yahoo", verified_src$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"organic"
+orders_src$cat[grep("yahoo", orders_src$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"organic"
 ## Bing
-registered$src[grep("bing", registered$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Organic"
-orders$src[grep("google", orders$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Organic"
-verified$src[grep("google", verified$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Organic"
+registered_src$cat[grep("bing", registered_src$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"organic"
+verified_src$cat[grep("bing", verified_src$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"organic"
+orders_src$cat[grep("bing", orders_src$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"organic"
+## Search
+registered_src$cat[grep("search", registered_src$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"organic"
+verified_src$cat[grep("search", verified_src$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"organic"
+orders_src$cat[grep("search", orders_src$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"organic"
 
+# Newsletter
+registered_src$cat[grep("newsletter", registered_src$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"newsletter"
+verified_src$cat[grep("newsletter", verified_src$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"newsletter"
+orders_src$cat[grep("newsletter", orders_src$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"newsletter"
 
-
-## Newsletter
-registered$src[grep("newsletter", registered$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Newsletter"
-orders$src[grep("newsletter", orders$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Newsletter"
-verified$src[grep("newsletter", verified$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Newsletter"
-
-## Facebook
-registered$src[grep("facebook", registered$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Facebook"
-orders$src[grep("facebook", orders$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Facebook"
-verified$src[grep("facebook", verified$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Facebook"
-
-# Remarketing
-registered$src[grep("remaketing", registered$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Remarketing"
-orders$src[grep("remaketing", orders$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Remarketing"
-verified$src[grep("remaketing", verified$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Remarketing"
+# Facebook
+registered_src$cat[grep("facebook", registered_src$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"facebook"
+verified_src$cat[grep("facebook", verified_src$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"facebook"
+orders_src$cat[grep("facebook", orders_src$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"facebook"
 
 # Affiliate
-registered$src[grep("linkwise", registered$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Affiliate"
-orders$src[grep("linkwise", orders$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Affiliate"
-verified$src[grep("linkwise", verified$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Affiliate"
+registered_src$cat[grep("linkwise", registered_src$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"affiliate"
+verified_src$cat[grep("linkwise", verified_src$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"affiliate"
+orders_src$cat[grep("linkwise", orders_src$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"affiliate"
 
+# Direct 
+registered_src$cat[registered_src$cat == ""]<-"direct"
+verified_src$cat[verified_src$cat == ""]<-"direct"
+orders_src$cat[orders_src$cat == ""]<-"direct"
 
 # Adwords
-registered$src[grep("google|cpc", registered$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Adwords"
-orders$src[grep("google|cpc", orders$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Adwords"
-verified$src[grep("google|cpc", verified$SOURCE , ignore.case=FALSE, fixed=FALSE)]<-"Adwords"
+registered_src$cat[grep("google|cpc", registered_src$SOURCE , ignore.case=FALSE, fixed=TRUE)]<-"adwords"
+verified_src$cat[grep("google|cpc", verified_src$SOURCE , ignore.case=FALSE, fixed=TRUE)]<-"adwords"
+orders_src$cat[grep("google|cpc", orders_src$SOURCE , ignore.case=FALSE, fixed=TRUE)]<-"adwords"
 
+
+library(plyr)
+reg<-ddply(registered_src,("cat"), summarize, registration=sum(REGISTERED_USERS))
+ver<-ddply(verified_src,("cat"), summarize, verifications=sum(VERIFIED_USERS))
+ord<-ddply(orders_src,("cat"), summarize, orders=sum(VERIFIED_ORDERS))
+
+reg$metric<-'registrations'
+ver$metric<-'verifications'
+ord$metric<-'orders'
+
+names(reg)<- c("cat","number","metric")
+names(ver)<- c("cat","number","metric")
+names(ord)<- c("cat","number","metric")
+
+report<-rbind(reg,ver,ord)
+tbadded<-data.frame("cat" ='ios',"number" = ios$sessions[1],"metric"= 'sessions')
+report<-rbind(report,tbadded)
+tbadded<-data.frame("cat" ='ios',"number" = ios$Users[1],"metric"= 'users')
+report<-rbind(report,tbadded)
+tbadded<-data.frame("cat" ='android',"number" = android$sessions[1],"metric"= 'sessions')
+report<-rbind(report,tbadded)
+tbadded<-data.frame("cat" ='android',"number" = android$Users[1],"metric"= 'users')
+report<-rbind(report,tbadded)
+tbadded<-data.frame("cat" ='website',"number" = website$sessions[1],"metric"= 'sessions')
+report<-rbind(report,tbadded)
+tbadded<-data.frame("cat" ='website',"number" = website$Users[1],"metric"= 'users')
+report<-rbind(report,tbadded)
+
+
+# Stop timer
+proc.time() - ptm
 
 ######################################################
 ############# KEY METRICS & SEO ######################
 ######################################################
+
+# +INT(seconds/60)+MOD(seconds;60)/100
 
 ######################################################
 ################# DIGITAL TOTAL ######################
