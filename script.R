@@ -17,8 +17,7 @@ library(RGA)
 # Authenticate Google Analytics
 client.id = '543269518849-dcdk7eio32jm2i4hf241mpbdepmifj00.apps.googleusercontent.com'
 client.secret = '9wSw6gyDVXtcgqEe0XazoBWG'
-ga_token<-authorize(client.id, client.secret, cache = getOption("rga.cache"),
-                    verbose = getOption("rga.verbose"))
+ga_token<-authorize(client.id, client.secret, cache = getOption("rga.cache"))
 
 #Set Dates
 today <- Sys.Date()
@@ -52,8 +51,7 @@ website<-get_ga(25764841, start.date = startdate, end.date = enddate,
              sampling.level = NULL,
              start.index = NULL, 
              max.results = NULL, 
-             ga_token,
-             verbose = getOption("rga.verbose")
+             ga_token
 )
 
 android<-get_ga(81060646, start.date = startdate, end.date = enddate,
@@ -72,8 +70,7 @@ android<-get_ga(81060646, start.date = startdate, end.date = enddate,
                 sampling.level = NULL,
                 start.index = NULL, 
                 max.results = NULL, 
-                ga_token,
-                verbose = getOption("rga.verbose")
+                ga_token
 )
 
 
@@ -93,8 +90,7 @@ ios<-get_ga(81074931, start.date = startdate, end.date = enddate,
                 sampling.level = NULL,
                 start.index = NULL, 
                 max.results = NULL, 
-                ga_token,
-                verbose = getOption("rga.verbose")
+                ga_token
 )
 
 
@@ -111,7 +107,7 @@ library(RMySQL)
 # Set timer
 proc.time() - ptm
 # Establish connection
-con <- dbConnect(RMySQL::MySQL(), host = 'db.clickdelivery.gr', port = 3307, dbname = "beta",
+con <- dbConnect(RMySQL::MySQL(), host = '172.20.0.1', port = 3307, dbname = "beta",
                  user = "tantonakis", password = "2secret4usAll!")
 # Send query
 rs <- dbSendQuery(con,"
@@ -152,7 +148,7 @@ proc.time() - ptm
 #########################################
 
 # Establish connection
-con <- dbConnect(RMySQL::MySQL(), host = 'db.clickdelivery.gr', port = 3307, dbname = "beta",
+con <- dbConnect(RMySQL::MySQL(), host = '172.20.0.1', port = 3307, dbname = "beta",
                  user = "tantonakis", password = "2secret4usAll!")
 # Send query
 rs <- dbSendQuery(con,"
@@ -179,7 +175,7 @@ proc.time() - ptm
 #########################################
 
 # Establish connection
-con <- dbConnect(RMySQL::MySQL(), host = 'db.clickdelivery.gr', port = 3307, dbname = "beta",
+con <- dbConnect(RMySQL::MySQL(), host = '172.20.0.1', port = 3307, dbname = "beta",
                  user = "tantonakis", password = "2secret4usAll!")
 # Send query
 rs <- dbSendQuery(con,"
@@ -353,8 +349,7 @@ segment<-get_ga(25764841, start.date = startdate, end.date = enddate,
                 sampling.level = NULL,
                 start.index = NULL, 
                 max.results = NULL, 
-                ga_token,
-                verbose = getOption("rga.verbose")
+                ga_token
 )
 
 tbadded<-data.frame("cat" ='organic',"number" = segment$sessions[segment$channelGrouping == 'Organic Search'],"metric"= 'sessions')
@@ -392,8 +387,7 @@ newusers_android<-get_ga(81060646, start.date = startdate, end.date = enddate,
                 sampling.level = NULL,
                 start.index = NULL, 
                 max.results = NULL, 
-                ga_token,
-                verbose = getOption("rga.verbose")
+                ga_token
 )
 
 tbadded<-data.frame("cat" ='android',"number" = newusers_android$newUsers[1],"metric"= 'apps')
@@ -416,8 +410,7 @@ impr_cli<-get_ga(25764841, start.date = startdate, end.date = enddate,
                  sampling.level = NULL,
                  start.index = NULL, 
                  max.results = NULL, 
-                 ga_token,
-                 verbose = getOption("rga.verbose")
+                 ga_token
 )
 
 impr_cli$cat<-0
