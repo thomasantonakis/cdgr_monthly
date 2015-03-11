@@ -27,8 +27,8 @@ year.rep<- year(today)- (month(today)==1)
 # Ask for dates
 
 
-startdate='2015-01-01' ##Start Date#########
-enddate='2015-01-31' ####End Date###########
+startdate='2015-02-01' ##Start Date#########
+enddate='2015-02-28' ####End Date###########
 
 # startdate<- format(ymd(paste(year.rep,month.rep,"01" ,sep="/")), format = "%Y-%m-%d")
 
@@ -127,8 +127,8 @@ rs <- dbSendQuery(con,"
                   LEFT JOIN `prefecture_detail`
                   ON (`prefecture_detail`.`language_id` = '2' AND `city_master`.`prefecture_id` = `prefecture_detail`.`prefecture_id`)
                   
-                  WHERE `user_master`.`verification_date` >= UNIX_TIMESTAMP('2015-01-01')
-                  AND `user_master`.`verification_date` < UNIX_TIMESTAMP('2015-02-01')
+                  WHERE `user_master`.`verification_date` >= UNIX_TIMESTAMP('2015-02-01')
+                  AND `user_master`.`verification_date` < UNIX_TIMESTAMP('2015-03-01')
                   AND `user_master`.`status` = 'VERIFIED'
                   AND `user_master`.`is_deleted` = 'N'
                   GROUP BY `user_master`.`referal_source`, `city_master`.`city_id`
@@ -155,8 +155,8 @@ rs <- dbSendQuery(con,"
                   
                   SELECT COUNT(*) AS REGISTERED_USERS, `user_master`.`status`, `user_master`.`referal_source` AS SOURCE
                   FROM `user_master`
-                  WHERE `user_master`.`i_date` >= UNIX_TIMESTAMP('2015-01-01')
-                  AND `user_master`.`i_date` < UNIX_TIMESTAMP('2015-02-01')
+                  WHERE `user_master`.`i_date` >= UNIX_TIMESTAMP('2015-02-01')
+                  AND `user_master`.`i_date` < UNIX_TIMESTAMP('2015-03-01')
                   AND `user_master`.`is_deleted` = 'N'
                   GROUP BY `user_master`.`status`, `user_master`.`referal_source`
                   
@@ -195,8 +195,8 @@ rs <- dbSendQuery(con,"
                   ON (`city_detail`.`language_id` = '2' AND `user_address`.`city_id` = `city_detail`.`city_id`)
                   JOIN `prefecture_detail`
                   ON (`prefecture_detail`.`language_id` = '2' AND `city_master`.`prefecture_id` = `prefecture_detail`.`prefecture_id`)
-                  WHERE `order_master`.`i_date` >= UNIX_TIMESTAMP('2015-01-01')
-                  AND `order_master`.`i_date` < UNIX_TIMESTAMP('2015-02-01')
+                  WHERE `order_master`.`i_date` >= UNIX_TIMESTAMP('2015-02-01')
+                  AND `order_master`.`i_date` < UNIX_TIMESTAMP('2015-03-01')
                   AND `order_master`.`status` IN ('VERIFIED', 'REJECTED')
                   AND `order_master`.`is_deleted` = 'N'
                   GROUP BY `order_master`.`status`, `order_master`.`order_referal`, `city_detail`.`city_id`
@@ -299,7 +299,7 @@ tbadded<-data.frame("cat" ='ios',"number" = ios$Users[1],"metric"= 'users')
 report<-rbind(report,tbadded)
 tbadded<-data.frame("cat" ='ios',"number" = ios$screenviews[1],"metric"= 'pageviews')
 report<-rbind(report,tbadded)
-tbadded<-data.frame("cat" ='ios',"number" = ios$avgSessionDuration[1],"metric"= 'sesdur')
+tbadded<-data.frame("cat" ='ios',"number" = ios$avg.session.duration[1],"metric"= 'sesdur')
 report<-rbind(report,tbadded)
 tbadded<-data.frame("cat" ='android',"number" = android$sessions[1],"metric"= 'sessions')
 report<-rbind(report,tbadded)
@@ -307,15 +307,15 @@ tbadded<-data.frame("cat" ='android',"number" = android$Users[1],"metric"= 'user
 report<-rbind(report,tbadded)
 tbadded<-data.frame("cat" ='android',"number" = android$screenviews[1],"metric"= 'pageviews')
 report<-rbind(report,tbadded)
-tbadded<-data.frame("cat" ='android',"number" = android$avgSessionDuration[1],"metric"= 'sesdur')
+tbadded<-data.frame("cat" ='android',"number" = android$avg.session.duration[1],"metric"= 'sesdur')
 report<-rbind(report,tbadded)
 tbadded<-data.frame("cat" ='website',"number" = website$sessions[1],"metric"= 'sessions')
 report<-rbind(report,tbadded)
 tbadded<-data.frame("cat" ='website',"number" = website$Users[1],"metric"= 'users')
 report<-rbind(report,tbadded)
-tbadded<-data.frame("cat" ='website',"number" = website$pageViews[1],"metric"= 'pageviews')
+tbadded<-data.frame("cat" ='website',"number" = website$page.views[1],"metric"= 'pageviews')
 report<-rbind(report,tbadded)
-tbadded<-data.frame("cat" ='website',"number" = website$avgSessionDuration[1],"metric"= 'sesdur')
+tbadded<-data.frame("cat" ='website',"number" = website$avg.session.duration[1],"metric"= 'sesdur')
 report<-rbind(report,tbadded)
 
 
@@ -352,25 +352,25 @@ segment<-get_ga(25764841, start.date = startdate, end.date = enddate,
                 ga_token
 )
 
-tbadded<-data.frame("cat" ='organic',"number" = segment$sessions[segment$channelGrouping == 'Organic Search'],"metric"= 'sessions')
+tbadded<-data.frame("cat" ='organic',"number" = segment$sessions[segment$channel.grouping == 'Organic Search'],"metric"= 'sessions')
 report<-rbind(report,tbadded)
-tbadded<-data.frame("cat" ='organic',"number" = segment$Users[segment$channelGrouping == 'Organic Search'],"metric"= 'users')
+tbadded<-data.frame("cat" ='organic',"number" = segment$Users[segment$channel.grouping == 'Organic Search'],"metric"= 'users')
 report<-rbind(report,tbadded)
-tbadded<-data.frame("cat" ='organic',"number" = segment$pageViews[segment$channelGrouping == 'Organic Search'],"metric"= 'pageviews')
+tbadded<-data.frame("cat" ='organic',"number" = segment$page.views[segment$channel.grouping == 'Organic Search'],"metric"= 'pageviews')
 report<-rbind(report,tbadded)
-tbadded<-data.frame("cat" ='organic',"number" = segment$avgSessionDuration[segment$channelGrouping == 'Organic Search'],"metric"= 'sesdur')
+tbadded<-data.frame("cat" ='organic',"number" = segment$avg.session.duration[segment$channel.grouping == 'Organic Search'],"metric"= 'sesdur')
 report<-rbind(report,tbadded)
-tbadded<-data.frame("cat" ='direct',"number" = segment$sessions[segment$channelGrouping == 'Direct'],"metric"= 'sessions')
+tbadded<-data.frame("cat" ='direct',"number" = segment$sessions[segment$channel.grouping == 'Direct'],"metric"= 'sessions')
 report<-rbind(report,tbadded)
-tbadded<-data.frame("cat" ='direct',"number" = segment$Users[segment$channelGrouping == 'Direct'],"metric"= 'users')
+tbadded<-data.frame("cat" ='direct',"number" = segment$Users[segment$channel.grouping == 'Direct'],"metric"= 'users')
 report<-rbind(report,tbadded)
-tbadded<-data.frame("cat" ='direct',"number" = segment$pageViews[segment$channelGrouping == 'Direct'],"metric"= 'pageviews')
+tbadded<-data.frame("cat" ='direct',"number" = segment$page.views[segment$channel.grouping == 'Direct'],"metric"= 'pageviews')
 report<-rbind(report,tbadded)
-tbadded<-data.frame("cat" ='direct',"number" = segment$avgSessionDuration[segment$channelGrouping == 'Direct'],"metric"= 'sesdur')
+tbadded<-data.frame("cat" ='direct',"number" = segment$avg.session.duration[segment$channel.grouping == 'Direct'],"metric"= 'sesdur')
 report<-rbind(report,tbadded)
-tbadded<-data.frame("cat" ='direct',"number" = segment$goal1Completions[segment$channelGrouping == 'Direct'],"metric"= 'orders_Analytics')
+tbadded<-data.frame("cat" ='direct',"number" = segment$goal1Completions[segment$channel.grouping == 'Direct'],"metric"= 'orders_Analytics')
 report<-rbind(report,tbadded)
-tbadded<-data.frame("cat" ='organic',"number" = segment$goal1Completions[segment$channelGrouping == 'Organic Search'],"metric"= 'orders_Analytics')
+tbadded<-data.frame("cat" ='organic',"number" = segment$goal1Completions[segment$channel.grouping == 'Organic Search'],"metric"= 'orders_Analytics')
 report<-rbind(report,tbadded)
 
 newusers_android<-get_ga(81060646, start.date = startdate, end.date = enddate,
@@ -390,7 +390,7 @@ newusers_android<-get_ga(81060646, start.date = startdate, end.date = enddate,
                 ga_token
 )
 
-tbadded<-data.frame("cat" ='android',"number" = newusers_android$newUsers[1],"metric"= 'apps')
+tbadded<-data.frame("cat" ='android',"number" = newusers_android$new.users[1],"metric"= 'apps')
 report<-rbind(report,tbadded)
 
 impr_cli<-get_ga(25764841, start.date = startdate, end.date = enddate,
@@ -419,8 +419,8 @@ impr_cli$cat[impr_cli$campaign == 'App. Android-Text']<-"android"
 impr_cli$cat[impr_cli$campaign == 'App. iOS-Text']<-"ios"
 impr_cli$cat[impr_cli$cat == 0]<-"adwords"
 impr<-ddply(impr_cli,("cat"), summarize, impressions=sum(impressions))
-clicks<-ddply(impr_cli,("cat"), summarize, impressions=sum(adClicks))
-cost<-ddply(impr_cli,("cat"), summarize, impressions=sum(adCost))
+clicks<-ddply(impr_cli,("cat"), summarize, impressions=sum(ad.clicks))
+cost<-ddply(impr_cli,("cat"), summarize, impressions=sum(ad.cost))
 
 impr$metric<-'impressions'
 clicks$metric<-'clicks'
@@ -433,7 +433,7 @@ names(cost)<- c("cat","number","metric")
 report<-rbind(report,impr,clicks,cost)
 
 
-write.xlsx(x = report, file = "Working.xlsx", row.names = FALSE)
+write.xlsx(x = report, file = "Working_0215.xlsx", row.names = FALSE)
 ######################################################
 ################# DIGITAL TOTAL ######################
 ######################################################
